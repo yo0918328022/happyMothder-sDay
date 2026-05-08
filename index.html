@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>母親節快樂</title>
+    <style>
+        :root {
+            --primary-pink: #ffafbd;
+            --dark-pink: #ff8e9e;
+            --carnation-pink-dark: #e06c75;
+            --carnation-pink-light: #ffb3ba;
+            --stem-green: #5a8e5a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #fdfbfb 0%, #eee1e3 100%);
+            font-family: "Microsoft JhengHei", sans-serif;
+            overflow: hidden;
+        }
+
+        #bg-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 3rem 4rem;
+            border-radius: 20px;
+            box-shadow: 0 15px 45px rgba(230,170,180,0.3);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        h1 {
+            color: #d85f6e;
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        p {
+            color: #444;
+            line-height: 1.8;
+            font-size: 1.3rem;
+            margin: 0.5rem 0;
+        }
+
+        /* 花束容器 */
+        .flower-bouquet-container {
+            position: absolute;
+            left: -80px;
+            bottom: -60px;
+            z-index: 20;
+            transform-origin: center bottom;
+            animation: sway 5s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        /* 康乃馨與蝴蝶結繪製畫布 */
+        .bouquet-canvas {
+            width: 150px;
+            height: 250px;
+        }
+
+        @keyframes sway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+
+        #burst-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 100;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+    <canvas id="burst-canvas"></canvas>
+
+    <div class="card">
+        <h1>母親節快樂</h1>
+        <p>親愛的媽媽，</p>
+        <p>謝謝您無私的愛與奉獻。</p>
+        <p>祝您永遠健康、快樂！</p>
+        <p style="font-size: 1rem; color: #aaa; margin-top: 2rem;">櫻禎&叡竣 敬上</p>
+
+        <div class="flower-bouquet-container">
+            <!-- 使用單一 Canvas 繪製花束與蝴蝶結 -->
+            <canvas id="bouquet-draw" class="bouquet-canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        /* ==============================
+           1. 背景動畫：櫻花與愛心混合 
+           ============================== */
+        const bgCanvas = document.getElementById('bg-canvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        let bgSymbols = [];
+
+        function resizeBg() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeBg);
+        resizeBg();
+
+        // 繪製真實櫻花瓣
+        function drawSakuraPetal(ctx, size) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0); // 花瓣基部
+            ctx.bezierCurveTo(-size/2, -size/2, -size/1.5, -size, 0, -size);
+            ctx.lineTo(0, -size * 0.85); // V形缺口
+            ctx.lineTo(0, -size);
+            ctx.bezierCurveTo(size/1.5, -size, size/2, -size/2, 0, 0);
+            ctx.fill();
+        }
+
+        function drawHeart(ctx, size) {
+            ctx.beginPath();
+            ctx.moveTo(0, size / 4);
+            ctx.quadraticCurveTo(0, 0, size / 4, 0);
+            ctx.quadraticCurveTo(size / 2, 0, size / 2, size / 4);
+            ctx.quadraticCurveTo(size / 2, 0, size * 3/4, 0);
+            ctx.quadraticCurveTo(size, 0, size, size / 4);
+            ctx.quadraticCurveTo(size, size / 2, size * 3/4, size * 3/4);
+            ctx.lineTo(size / 2, size);
+            ctx.lineTo(size / 4, size * 3/4);
+            ctx.quadraticCurveTo(0, size / 2, 0, size / 4);
+            ctx.fill();
+        }
+
+        class BackgroundSymbol {
+            constructor() {
+                this.x = Math.random() * bgCanvas.width;
+                this.y = Math.random() * bgCanvas.height;
+                // 提高混合度
+                this.type = Math.random() > 0.6 ? 'heart' : 'sakura'; 
+                this.size = Math.random() * 12 + 8;
+                this.speedY = Math.random() * 0.8 + 0.4;
+                this.speedX = Math.random() * 0.4 - 0.2;
+                this.angle = Math.random() * 360;
+                this.spin = Math.random() * 1.5 - 0.75;
+                // 櫻花用更柔和的粉白，愛心用溫馨粉
+                this.color = this.type === 'sakura' ? `hsl(350, 100%, 92%)` : `hsl(350, 100%, 80%)`;
+                this.opacity = Math.random() * 0.4 + 0.1;
+            }
+
+            update() {
+                this.y += this.speedY;
+                this.x += this.speedX;
+                this.angle += this.spin;
+                if (this.y > bgCanvas.height + 20) {
+                    this.y = -20;
+                    this.x = Math.random() * bgCanvas.width;
+                }
+            }
+
+            draw() {
+                bgCtx.save();
+                bgCtx.translate(this.x, this.y);
+                bgCtx.rotate(this.angle * Math.PI / 180);
+                bgCtx.globalAlpha = this.opacity;
+                bgCtx.fillStyle = this.color;
+
+                if (this.type === 'heart') {
+                    drawHeart(bgCtx, this.size);
+                } else {
+                    drawSakuraPetal(bgCtx, this.size);
+                }
+                bgCtx.restore();
+            }
+        }
+
+        for (let i = 0; i < 40; i++) {
+            bgSymbols.push(new BackgroundSymbol());
+        }
+
+        function animateBg() {
+            bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+            bgSymbols.forEach(symbol => {
+                symbol.update();
+                symbol.draw();
+            });
+            requestAnimationFrame(animateBg);
+        }
+        animateBg();
+
+        /* ==============================
+           2. 繪製真實花束與蝴蝶結 (關鍵修正)
+           ============================== */
+        function drawBouquetAndRibbon() {
+            const canvas = document.getElementById('bouquet-draw');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 300;
+            canvas.height = 500;
+            ctx.scale(2, 2); // 保持邏輯在 150x250
+
+            // A. 繪製花莖
+            ctx.strokeStyle = '#5a8e5a';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(75, 80);
+            ctx.lineTo(75, 180);
+            ctx.stroke();
+
+            // B. 繪製康乃馨花朵 (真實層疊與鋸齒路徑)
+            function drawRealCarnationFlowers() {
+                // 三個主要的層疊位置
+                const locations = [
+                    { x: 75, y: 60, scale: 1.1 },
+                    { x: 55, y: 70, scale: 1.0 },
+                    { x: 95, y: 70, scale: 1.0 }
+                ];
+
+                locations.forEach(loc => {
+                    ctx.save();
+                    ctx.translate(loc.x, loc.y);
+                    ctx.scale(loc.scale, loc.scale);
+
+                    // 繪製花托
+                    ctx.fillStyle = '#6a9e6a';
+                    ctx.beginPath();
+                    ctx.moveTo(-8, 15);
+                    ctx.quadraticCurveTo(0, 25, 8, 15);
+                    ctx.lineTo(5, 5);
+                    ctx.lineTo(-5, 5);
+                    ctx.fill();
+
+                    // 由外向內繪製不變角鋸齒花瓣 (關鍵修正)
+                    function drawCarnationLayer(radius, jaggedness, color, layers) {
+                        ctx.fillStyle = color;
+                        const points = 60; // 更多鋸齒
+                        const angleStep = (Math.PI * 2) / points;
+
+                        for(let l=0; l<layers; l++) {
+                            const currentRadius = radius - (l * 4);
+                            ctx.beginPath();
+                            for (let i = 0; i <= points; i++) {
+                                const angle = i * angleStep;
+                                // 產生更隨機、真實的鋸齒
+                                const rad = currentRadius + (i % 2 === 0 ? jaggedness : -jaggedness) + (Math.random()*2);
+                                const x = Math.cos(angle) * rad;
+                                const y = Math.sin(angle) * rad * 0.85; // 輕微扁平
+
+                                if (i === 0) ctx.moveTo(x, y);
+                                else ctx.lineTo(x, y);
+                            }
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                    }
+
+                    // 層疊立體感
+                    drawCarnationLayer(30, 4, '#f4adb3', 3); // 外層
+                    drawCarnationLayer(22, 3, '#e06c75', 3); // 中層
+                    drawCarnationLayer(12, 2, '#c85560', 2); // 內層
+
+                    ctx.restore();
+                });
+            }
+            drawRealCarnationFlowers();
+
+            // C. 繪製蝴蝶結 (真實線條與皺褶，不變米奇形)
+            function drawRealRibbon() {
+                const centerX = 75;
+                const centerY = 160;
+                ctx.save();
+                ctx.fillStyle = '#e74c3c'; // 鮮豔紅
+                ctx.strokeStyle = '#c0392b'; // 深紅邊線
+                ctx.lineWidth = 1;
+
+                // 蝴蝶結的結
+                ctx.beginPath();
+                ctx.moveTo(centerX - 8, centerY - 8);
+                ctx.lineTo(centerX + 8, centerY - 8);
+                ctx.lineTo(centerX + 10, centerY + 8);
+                ctx.lineTo(centerX - 10, centerY + 8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // 蝴蝶結的兩圈 (真實曲線與皺褶)
+                function drawRibbonLoop(side) {
+                    ctx.save();
+                    ctx.translate(centerX, centerY);
+                    if (side === 'left') ctx.scale(-1, 1);
+                    ctx.beginPath();
+                    ctx.moveTo(10, -5);
+                    // 圈的外緣
+                    ctx.bezierCurveTo(40, -25, 55, 10, 50, 20);
+                    // 圈的內緣，回歸到結
+                    ctx.bezierCurveTo(45, 15, 30, -5, 10, 5);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                drawRibbonLoop('left');
+                drawRibbonLoop('right');
+
+                // 蝴蝶結的帶子 (自然下垂)
+                function drawRibbonTail(side) {
+                    ctx.save();
+                    ctx.translate(centerX, centerY);
+                    if (side === 'left') ctx.scale(-1, 1);
+                    ctx.beginPath();
+                    ctx.moveTo(15, 8);
+                    ctx.lineTo(40, 50);
+                    ctx.lineTo(50, 45);
+                    ctx.lineTo(25, 10);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                drawRibbonTail('left');
+                drawRibbonTail('right');
+
+                ctx.restore();
+            }
+            drawRealRibbon();
+        }
+        drawBouquetAndRibbon();
+
+        /* ==============================
+           3. 點擊特效 (保留)
+           ============================== */
+        const burstCanvas = document.getElementById('burst-canvas');
+        const bCtx = burstCanvas.getContext('2d');
+        let particles = [];
+
+        function resizeBurst() {
+            burstCanvas.width = window.innerWidth;
+            burstCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeBurst);
+        resizeBurst();
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.size = Math.random() * 5 + 2;
+                this.speedX = Math.random() * 6 - 3;
+                this.speedY = Math.random() * -5 - 2;
+                this.color = `hsl(${Math.random() * 20 + 340}, 100%, 85%)`;
+                this.weight = 0.12;
+                this.opacity = 1;
+            }
+            update() {
+                this.speedY += this.weight;
+                this.x += this.speedX; this.y += this.speedY;
+                if (this.opacity > 0.01) this.opacity -= 0.015;
+            }
+            draw() {
+                bCtx.save();
+                bCtx.globalAlpha = this.opacity;
+                bCtx.fillStyle = this.color;
+                bCtx.beginPath(); bCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2); bCtx.fill();
+                bCtx.restore();
+            }
+        }
+
+        window.addEventListener('click', function(e) {
+            for (let i = 0; i < 15; i++) {
+                particles.push(new Particle(e.clientX, e.clientY));
+            }
+        });
+
+        function animateBurst() {
+            bCtx.clearRect(0, 0, burstCanvas.width, burstCanvas.height);
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].opacity <= 0.01) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+            requestAnimationFrame(animateBurst);
+        }
+        animateBurst();
+    </script>
+</body>
+</html>
